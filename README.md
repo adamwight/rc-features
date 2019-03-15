@@ -1,6 +1,6 @@
-# RecentProcessing
+# Wiki recent changes processing
 
-**TODO: Add description**
+Extract features from recent changes to wikis.
 
 ## Installation
 

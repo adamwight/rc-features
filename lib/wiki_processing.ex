@@ -18,6 +18,7 @@ defmodule WikiProcessing do
 
     case data["type"] do
       "edit" ->
+        # FIXME: Make this a feature step.  Read a .dot dependency graph and execute dynamically.
         html = get_revision_html(data["server_url"], data["title"], data["revision"]["new"])
         if html != nil do
           stream = Task.async_stream(edit_features, WikiProcessing, :extract_feature, [data, html], ordered: false)
@@ -33,7 +34,7 @@ defmodule WikiProcessing do
     Logger.debug("#{feature}: #{result}")
   end
 
-  @spec get_revision_html(String, String, integer) :: String
+  @spec get_revision_html(String, String, integer) :: nil | String
   def get_revision_html(server_url, title, revision) do
     url = URI.encode "#{server_url}/api/rest_v1/page/html/#{title}/#{revision}"
     response = HTTPotion.get url
