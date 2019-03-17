@@ -2,9 +2,14 @@ defmodule DependencyVisitor do
   @moduledoc """
   Build a data set by following digraph edges and executing nodes.
   """
+
+  @spec visit_dependencies(:digraph, atom, fun) :: nil
   def visit_dependencies(graph, context, executor) do
-    # FIXME: Initial parameters should be explicitly wired into the graph.
-    available_tasks = find_leaves(graph)
+    # Find and begin with the current roots, which have no dependencies
+    # TODO: or for which inputs are ready.
+    # FIXME: alternatively, require a single root which demultiplexes inputs.
+    # TODO: we can scan in topsort order
+    available_tasks = find_roots(graph)
 
     stream = Task.async_stream(available_tasks, &DependencyVisitor.visit_vertex(&1, graph, executor, context), ordered: false)
     Stream.run(stream)
@@ -13,7 +18,12 @@ defmodule DependencyVisitor do
     # available.
   end
 
-  @spec visit_vertex(vertex, digraph, fun, ets) :: nil
+  @spec find_roots(:digraph) :: list
+  def find_roots(graph) do
+    # TODO
+  end
+
+  @spec visit_vertex(any, :digraph, fun, atom) :: nil
   def visit_vertex(vertex, graph, executor, context) do
     {_, input_data} = collect_inputs(graph, vertex, context)
     # FIXME: multiple input edge data must be distinguished by pair keying.
@@ -30,16 +40,19 @@ defmodule DependencyVisitor do
     end)
   end
 
+  @spec check_ready_downstreams(:digraph, Feature, atom) :: list
   def check_ready_downstreams(graph, vertex, context) do
     downstreams = :digraph.out_neighbors(graph, vertex)
-    Enum.flat_map(downstreams, downstream_vertex ->
-      {in_neighbors, available_inputs} = collect_input_data(graph, downstream_vertex, context)
+    Enum.flat_map(downstreams, fn downstream_vertex ->
+      {in_neighbors, available_inputs} = collect_inputs(graph, downstream_vertex, context)
       if length(available_inputs) == length(in_neighbors) do
         # All data is present, this vertex is ready for execution.
         [downstream_vertex]
       end
+    end)
   end
 
+  @spec collect_inputs(:digraph, Feature.t(), atom) :: {list, list}
   defp collect_inputs(graph, vertex, context) do
     upstreams = :digraph.in_neighbors(graph, vertex)
     # Get upstream results.
